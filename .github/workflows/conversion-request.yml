@@ -125,8 +125,8 @@ jobs:
         with:
           name: Geyser Pack Files
           path: |
-            staging/staging/geyser_resources.mcpack
-            staging/staging/geyser_mappings.json
+            staging/staging/bedrock.mcpack
+            staging/staging/mappings.json
             staging/staging/config.json
 
   post-result:
@@ -144,8 +144,8 @@ jobs:
           body: |
             ## :sparkles: The run has finished! :sparkles:
             - Download the pack files from the [action run][1] page. :arrow_double_down:
-            - Upload the resource pack `geyser_resources.mcpack` to the `packs` folder of your Geyser folder. :file_folder:
-            - Upload the mappings file `geyser_mappings.json` to the `custom_mappings` folder of your Geyser folder. :page_with_curl:
+            - Upload the resource pack `bedrock.mcpack` to the `packs` folder of your Geyser folder. :file_folder:
+            - Upload the mappings file `mappings.json` to the `custom_mappings` folder of your Geyser folder. :page_with_curl:
 
             If you notice issues with the converted files, please refer to the action log for errors and open a bug report if you believe there is an issue with the converter. This issue will be closed automatically.
 

@@ -994,7 +994,7 @@ jq '
     "format_version": "1",
     "items": $mappings
   }
-' config.json | sponge ./staging/geyser_mappings.json
+' config.json | sponge ./staging/mappings.json
 
 if [ -f sprites.json ]; then
   status_message process "Adding provided sprite paths from sprites.json"
@@ -1037,7 +1037,7 @@ if [ -f sprites.json ]; then
     ))}
     ) | add)
   }
-  ' scratch_files/sprite_hashmap.json ./staging/geyser_mappings.json | sponge ./staging/geyser_mappings.json
+  ' scratch_files/sprite_hashmap.json ./staging/mappings.json | sponge ./staging/mappings.json
 fi
 
 rm -rf assets && rm -f pack.mcmeta && rm -f pack.png
@@ -1051,7 +1051,7 @@ else
 fi
 
 status_message process "Compressing output pack"
-cd ./staging/rp > /dev/null && zip -rq8 geyser_resources.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./staging/rp/geyser_resources.mcpack ./staging/geyser_resources.mcpack
+cd ./staging/rp > /dev/null && zip -rq8 bedrock.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./staging/rp/bedrock.mcpack ./staging/bedrock.mcpack
 rm -rf ./staging/rp ./staging/bp
 
 cp config.json ./staging/config.json
