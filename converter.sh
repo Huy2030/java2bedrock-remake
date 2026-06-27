@@ -612,7 +612,8 @@ do
       local atlas_index=0
     fi
 
-    mkdir -p ./staging/rp/models/blocks/${namespace}/${model_path} --arg generated "${generated}" --arg binding "c.item_slot == 'head' ? 'head' : q.item_slot_to_bone_name(c.item_slot)" --arg geometry "${geometry}" -c '
+    mkdir -p ./staging/rp/models/blocks/${namespace}/${model_path}
+    jq --slurpfile atlas scratch_files/spritesheet/${atlas_index}.json --arg generated "${generated}" --arg binding "c.item_slot == 'head' ? 'head' : q.item_slot_to_bone_name(c.item_slot)" --arg geometry "${geometry}" -c '
     .textures as $texture_list |
     def namespace: if contains(":") then sub("\\:(.+)"; "") else "minecraft" end;
     def tobool: if .=="true" then true elif .=="false" then false else null end;
