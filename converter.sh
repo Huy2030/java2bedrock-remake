@@ -282,7 +282,6 @@ jq --slurpfile hashmap scratch_files/hashmap.json '
     )
 ' config.json | sponge config.json
 
-status_message process "Generating initial directory strucutre for our bedrock packs"
 mkdir -p ./staging/rp/models/blocks && mkdir -p ./staging/rp/textures && mkdir -p ./staging/rp/attachables && mkdir -p ./staging/rp/animations && mkdir -p ./staging/bp/blocks && mkdir -p ./staging/bp/items
 
 if test -f "./pack.png"; then
@@ -296,7 +295,6 @@ uuid4=($(uuidgen))
 
 pack_desc="$(jq -r '(.pack.description // "Geyser 3D Items Resource Pack")' ./pack.mcmeta)"
 
-status_message process "Generating resource pack manifest"
 jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid2 "${uuid2}" -n '
 {
     "format_version": 2,
@@ -305,7 +303,7 @@ jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid2 "${uuid2
         "name": $pack_desc,
         "uuid": ($uuid1 | ascii_downcase),
         "version": [1, 0, 0],
-        "min_engine_version": [1, 18, 3]
+        "min_engine_version": [1, 21, 0]
     },
     "modules": [
         {
@@ -317,44 +315,12 @@ jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid2 "${uuid2
     ]
 }
 ' | sponge ./staging/rp/manifest.json
-
-status_message process "Generating behavior pack manifest"
-jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid3 "${uuid3}" --arg uuid4 "${uuid4}" -n '
-{
-    "format_version": 2,
-    "header": {
-        "description": "Adds 3D items for use with a Geyser proxy",
-        "name": $pack_desc,
-        "uuid": ($uuid3 | ascii_downcase),
-        "version": [1, 0, 0],
-        "min_engine_version": [ 1, 18, 3]
-    },
-    "modules": [
-        {
-            "description": "Adds 3D items for use with a Geyser proxy",
-            "type": "data",
-            "uuid": ($uuid4 | ascii_downcase),
-            "version": [1, 0, 0]
-        }
-    ],
-    "dependencies": [
-        {
-            "uuid": ($uuid1 | ascii_downcase),
-            "version": [1, 0, 0]
-        }
-    ]
-}
-' | sponge ./staging/bp/manifest.json
-
-status_message process "Generating resource pack item texture definition"
 jq -nc '{"texture_data":{}}' | sponge ./staging/rp/textures/item_texture.json
-
-status_message process "Generating resource pack disabling animation"
 jq -nc '
 {
   "format_version": "1.10.0",
   "animations": {
-    "animation..disable": {
+    "animation.disable": {
       "loop": true,
       "override_previous_animation": true,
       "bones": {
@@ -365,7 +331,7 @@ jq -nc '
     }
   }
 }
-' | sponge ./staging/rp/animations/animation..disable.json
+' | sponge ./staging/rp/animations/animation.disable.json
 
 if [[ ${fallback_pack} != none ]] && [[ ! -f default_assets.zip ]]
 then
@@ -581,7 +547,7 @@ do
   generate_atlas () {
     local texture_list=( $(jq -s --arg index "${1}" -r '(.[1][($index | tonumber)] - .[0] | length > 0) as $fallback_needed | ((.[1][($index | tonumber)] - (.[1][($index | tonumber)] - .[0])) + (if $fallback_needed then ["./assets/minecraft/textures/0.png"] else [] end)) | .[]' scratch_files/all_textures.temp scratch_files/union_atlas.temp) )
     status_message process "Generating sprite sheet ${1} of ${total_union_atlas}"
-    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath ${texture_list[@]}
+    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath ${texture_list[@]} 2>&1 | head -5
     echo ${1} >> scratch_files/atlases.csv
   }
   generate_atlas "${i}"
@@ -714,7 +680,7 @@ do
       {
         "format_version": "1.10.0",
         "animations": {
-          ("animation.." + ($geometry) + ".thirdperson_main_hand"): {
+          ("animation." + ($geometry) + ".thirdperson_main_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom_x": (if .display.thirdperson_righthand then {
@@ -734,7 +700,7 @@ do
               }
             }
           },
-          ("animation.." + ($geometry) + ".thirdperson_off_hand"): {
+          ("animation." + ($geometry) + ".thirdperson_off_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom_x": (if .display.thirdperson_lefthand then {
@@ -754,7 +720,7 @@ do
               }
             }
           },
-          ("animation.." + ($geometry) + ".head"): {
+          ("animation." + ($geometry) + ".head"): {
             "loop": true,
             "bones": {
               "geyser_custom_x": {
@@ -773,7 +739,7 @@ do
               }
             }
           },
-          ("animation.." + ($geometry) + ".firstperson_main_hand"): {
+          ("animation." + ($geometry) + ".firstperson_main_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom": {
@@ -794,7 +760,7 @@ do
               } else null end)
             }
           },
-          ("animation.." + ($geometry) + ".firstperson_off_hand"): {
+          ("animation." + ($geometry) + ".firstperson_off_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom": {
@@ -902,12 +868,12 @@ do
               ]
             },
             "animations": {
-              "thirdperson_main_hand": ("animation.." + $geometry + ".thirdperson_main_hand"),
-              "thirdperson_off_hand": ("animation.." + $geometry + ".thirdperson_off_hand"),
-              "thirdperson_head": ("animation.." + $geometry + ".head"),
-              "firstperson_main_hand": ("animation.." + $geometry + ".firstperson_main_hand"),
-              "firstperson_off_hand": ("animation.." + $geometry + ".firstperson_off_hand"),
-              "firstperson_head": "animation..disable"
+              "thirdperson_main_hand": ("animation." + $geometry + ".thirdperson_main_hand"),
+              "thirdperson_off_hand": ("animation." + $geometry + ".thirdperson_off_hand"),
+              "thirdperson_head": ("animation." + $geometry + ".head"),
+              "firstperson_main_hand": ("animation." + $geometry + ".firstperson_main_hand"),
+              "firstperson_off_hand": ("animation." + $geometry + ".firstperson_off_hand"),
+              "firstperson_head": "animation.disable"
             },
             "render_controllers": [ "controller.render.item_default" ]
           }
@@ -1043,7 +1009,7 @@ if [ -f sprites.json ]; then
   }
   ' scratch_files/sprite_hashmap.json ./staging/mappings.json | sponge ./staging/mappings.json
 fi
-find ./target/rp/textures -name '*.png' | xargs -P $(nproc) -I{} mogrify -define png:compression-level=9 {}
+find ./staging/rptextures -name '*.png' | xargs -P $(nproc) -I{} mogrify -define png:compression-level=9 {}
 rm -rf assets && rm -f pack.mcmeta && rm -f pack.png
 if [[ ${save_scratch} != "true" ]] 
 then
