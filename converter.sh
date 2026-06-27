@@ -76,12 +76,11 @@ done
 
 if [[ ${disable_ulimit} == "true" ]]
 then
-  getconf ARG_MAX
+  getconf ARG_MAX > /dev/null
   ulimit -s unlimited
-  status_message info "Changed ulimit settings for script:"
-  ulimit -a
-  echo | xargs --show-limits
-  getconf ARG_MAX
+  ulimit -a > /dev/null
+  echo | xargs --show-limits > /dev/null 2>&1
+  getconf ARG_MAX > /dev/null
 fi
 
 printf '\e[1;31m%-6s\e[m\n' "
@@ -419,7 +418,7 @@ done
 status_message completion "Initial pack setup complete\n"
 
 status_message process "Normalizing PNG files for spritesheet generation"
-find ./assets/**/textures -type f -name '*.png' ! -name '*.mcmeta' -exec mogrify -define png:format=png8 -type TrueColorAlpha {} + 2>/dev/null || true
+find ./assets -path '*/textures/*.png' ! -name '*.mcmeta' -exec mogrify -define png:format=png8 -type TrueColorAlpha {} + 2>/dev/null || true
 
 jq -r '.[] | select(.parent != null) | [.path, .geyserID, .parent, .namespace, .model_path, .model_name, .path_hash] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/pa.csv
 
