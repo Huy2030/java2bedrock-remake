@@ -544,7 +544,11 @@ do
   generate_atlas () {
     local texture_list=( $(jq -s --arg index "${1}" -r '(.[1][($index | tonumber)] - .[0] | length > 0) as $fallback_needed | ((.[1][($index | tonumber)] - (.[1][($index | tonumber)] - .[0])) + (if $fallback_needed then ["./assets/minecraft/textures/0.png"] else [] end)) | .[]' scratch_files/all_textures.temp scratch_files/union_atlas.temp) )
     status_message process "Generating sprite sheet ${1} of ${total_union_atlas}"
-    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath --no-trim ${texture_list[@]} 1> /dev/null
+    echo "[DEBUG] texture_list count: ${#texture_list[@]}" >&2
+    echo "[DEBUG] texture_list[0]: ${texture_list[0]}" >&2
+    echo "[DEBUG] union_atlas entry ${1}: $(jq -r --arg i "${1}" '.[$i | tonumber] | length' scratch_files/union_atlas.temp) items" >&2
+    echo "[DEBUG] all_textures count: $(jq 'length' scratch_files/all_textures.temp)" >&2
+    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath --no-trim ${texture_list[@]} 2>&1
     echo ${1} >> scratch_files/atlases.csv
   }
   wait_for_jobs
