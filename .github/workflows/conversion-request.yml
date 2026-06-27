@@ -45,7 +45,7 @@ jobs:
             "pack_url": .["java-pack-direct-download-url"].text[1:-1],
             "default_pack_url": test_input(.["default-pack-direct-download-url"].text; " null ")[1:-1],
             "merge_pack_url": test_input(.["bedrock-merge-pack-direct-download-url"].text; " null ")[1:-1],
-            "default_assets_version": test_input(.["default-assets-version"].text; "1.19.3"),
+            "default_assets_version": test_input(.["default-assets-version"].text; "1.21"),
             "block_material": test_input(.["block-material"].text; "alpha_test"),
             "attachable_material": test_input(.["attachable-material"].text; "entity_alphatest_one_sided"),
             "archive_scratch": test_input(.["archive-scratch-files"].text; "false"),
@@ -113,10 +113,10 @@ jobs:
           cp converter.sh staging/
           cd staging
           chmod +x converter.sh
-          COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o input_pack.zip "${PACK_URL}"
+          curl -sL -o input_pack.zip "${PACK_URL}"
           MERGE_PACK_FILE="${MERGE_PACK_URL}"
           if [ "${MERGE_PACK_URL}" != "null" ]; then
-            COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o merge_pack.zip "${MERGE_PACK_URL}"
+            curl -sL -o merge_pack.zip "${MERGE_PACK_URL}"
             MERGE_PACK_FILE="merge_pack.zip"
           fi
           ./converter.sh input_pack.zip -w "false" -m ${MERGE_PACK_FILE} -a ${ATTACHABLE_MATERIAL} -b ${BLOCK_MATERIAL} -v ${DEFAULT_ASSETS_VERSION} -r ${RENAME_MODEL_FILES} -s ${ARCHIVE_SCRATCH} -u "true"
@@ -125,9 +125,9 @@ jobs:
         with:
           name: Geyser Pack Files
           path: |
-            staging/geyser_resources.mcpack
-            staging/geyser_mappings.json
-            staging/config.json
+            staging/staging/geyser_resources.mcpack
+            staging/staging/geyser_mappings.json
+            staging/staging/config.json
 
   post-result:
     runs-on: ubuntu-latest
