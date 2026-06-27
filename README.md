@@ -3,3 +3,6 @@ This project is a remake based on the original repository at https://github.com/
 - Fixed an issue related to generating UV textures for 3D models
 - Automatically generate `item_texture.json` paths for 3D models, eliminating the need to create the `sprites.json` file (you still need to create the icon for the 3D model yourself using BlockBench)
 - Delete unnecessary junk filess
+
+
+# If there is interest in the project, I will add more features

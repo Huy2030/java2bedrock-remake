@@ -418,6 +418,9 @@ done
 
 status_message completion "Initial pack setup complete\n"
 
+status_message process "Normalizing PNG files for spritesheet generation"
+find ./assets/**/textures -type f -name '*.png' ! -name '*.mcmeta' -exec mogrify -define png:format=png8 -type TrueColorAlpha {} + 2>/dev/null || true
+
 jq -r '.[] | select(.parent != null) | [.path, .geyserID, .parent, .namespace, .model_path, .model_name, .path_hash] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/pa.csv
 
 _start=1
@@ -1041,7 +1044,7 @@ if [ -f sprites.json ]; then
   }
   ' scratch_files/sprite_hashmap.json ./staging/mappings.json | sponge ./staging/mappings.json
 fi
-
+find ./target/rp/textures -name '*.png' | xargs -P $(nproc) -I{} mogrify -define png:compression-level=9 {}
 rm -rf assets && rm -f pack.mcmeta && rm -f pack.png
 if [[ ${save_scratch} != "true" ]] 
 then
