@@ -579,13 +579,11 @@ do
   generate_atlas () {
     local texture_list=( $(jq -s --arg index "${1}" -r '(.[1][($index | tonumber)] - .[0] | length > 0) as $fallback_needed | ((.[1][($index | tonumber)] - (.[1][($index | tonumber)] - .[0])) + (if $fallback_needed then ["./assets/minecraft/textures/0.png"] else [] end)) | .[]' scratch_files/all_textures.temp scratch_files/union_atlas.temp) )
     status_message process "Generating sprite sheet ${1} of ${total_union_atlas}"
-    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath ${texture_list[@]} 1> /dev/null
+    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath ${texture_list[@]}
     echo ${1} >> scratch_files/atlases.csv
   }
-  wait_for_jobs
-  generate_atlas "${i}" &
+  generate_atlas "${i}"
 done
-wait
 
 jq -cR 'split(",")' scratch_files/atlases.csv | jq -s 'map({("gmdl_atlas_" + .[0]): {"textures": ("textures/" + .[0])}}) | add' > scratch_files/atlases.json
 jq -s '.[0] as $atlases | .[1] | .texture_data += $atlases' scratch_files/atlases.json ./staging/rp/textures/terrain_texture.json | sponge ./staging/rp/textures/terrain_texture.json
@@ -614,9 +612,7 @@ do
       local atlas_index=0
     fi
 
-    status_message process "Starting conversion of model with GeyserID ${gid}"
-    mkdir -p ./staging/rp/models/blocks/${namespace}/${model_path}
-    jq --slurpfile atlas scratch_files/spritesheet/${atlas_index}.json --arg generated "${generated}" --arg binding "c.item_slot == 'head' ? 'head' : q.item_slot_to_bone_name(c.item_slot)" --arg geometry "${geometry}" -c '
+    mkdir -p ./staging/rp/models/blocks/${namespace}/${model_path} --arg generated "${generated}" --arg binding "c.item_slot == 'head' ? 'head' : q.item_slot_to_bone_name(c.item_slot)" --arg geometry "${geometry}" -c '
     .textures as $texture_list |
     def namespace: if contains(":") then sub("\\:(.+)"; "") else "minecraft" end;
     def tobool: if .=="true" then true elif .=="false" then false else null end;
