@@ -586,9 +586,9 @@ do
 done
 
 jq -cR 'split(",")' scratch_files/atlases.csv | jq -s 'map({("gmdl_atlas_" + .[0]): {"textures": ("textures/" + .[0])}}) | add' > scratch_files/atlases.json
-jq -s '.[0] as $atlases | .[1] | .texture_data += $atlases' scratch_files/atlases.json ./staging/rp/textures/terrain_texture.json | sponge ./staging/rp/textures/terrain_texture.json
 
 status_message completion "All sprite sheets generated"
+mkdir -p ./staging/rp/textures
 mv scratch_files/spritesheet/*.png ./staging/rp/textures
 
 jq -r '.[] | [.path, .geyserID, .generated, .namespace, .model_path, .model_name, .path_hash, .geometry] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/all.csv
