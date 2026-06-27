@@ -384,7 +384,7 @@ done
 status_message completion "Initial pack setup complete\n"
 
 status_message process "Normalizing PNG files for spritesheet generation"
-find ./assets -path '*/textures/*.png' ! -name '*.mcmeta' -exec mogrify -define png:format=png8 -type TrueColorAlpha {} + 2>/dev/null || true
+find ./assets -path '*/textures/*.png' ! -name '*.mcmeta' -exec mogrify -define png:format=png32 -type TrueColorAlpha {} + 2>/dev/null || true
 
 jq -r '.[] | select(.parent != null) | [.path, .geyserID, .parent, .namespace, .model_path, .model_name, .path_hash] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/pa.csv
 
@@ -547,7 +547,7 @@ do
   generate_atlas () {
     local texture_list=( $(jq -s --arg index "${1}" -r '(.[1][($index | tonumber)] - .[0] | length > 0) as $fallback_needed | ((.[1][($index | tonumber)] - (.[1][($index | tonumber)] - .[0])) + (if $fallback_needed then ["./assets/minecraft/textures/0.png"] else [] end)) | .[]' scratch_files/all_textures.temp scratch_files/union_atlas.temp) )
     status_message process "Generating sprite sheet ${1} of ${total_union_atlas}"
-    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath --engine canvas ${texture_list[@]} 2>&1 | head -5
+    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath --no-trim ${texture_list[@]} 2>&1 | head -5
     echo ${1} >> scratch_files/atlases.csv
   }
   generate_atlas "${i}"

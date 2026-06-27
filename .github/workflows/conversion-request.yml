@@ -94,8 +94,8 @@ jobs:
           sudo apt-get update
       - name: Install dependencies
         run: |
-          sudo apt-get install -y --fix-missing moreutils zip imagemagick ghostscript libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-          yarn global add spritesheet-js canvas
+          sudo apt-get install -y --fix-missing moreutils zip imagemagick ghostscript
+          yarn global add spritesheet-js
       - name: Convert Pack
         id: convert-pack
         continue-on-error: false
