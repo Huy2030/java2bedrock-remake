@@ -545,27 +545,34 @@ model_list=( $(jq -r '.[] | select(.generated == false) | .path' config.json) )
 
 status_message process "Generating an array of all model PNG files to crosscheck with our atlas"
 jq -n '$ARGS.positional' --args $(find ./assets/**/textures -type f -name '*.png') | sponge scratch_files/all_textures.temp
-status_message process "Generating union atlas arrays for all model textures"
-jq -s '
-def namespace: 
-  if contains(":") then sub("\\:(.+)"; "") else "minecraft" end; 
-[.[]| [.textures[]?] | unique] 
-| map(map("./assets/" + (. | namespace) + "/textures/" + (. | sub("(.*?)\\:"; "")) + ".png"))
-' ${model_list[@]} | sponge scratch_files/union_atlas.temp
-jq '
-def intersects(a;b): any(a[]; . as $x | any(b[]; . == $x));
-
-def mapatlas(set):
-(set | unique) as $unique_set
-| (map(if intersects(.; $unique_set) then . else empty end) | add + $unique_set | unique) as $new_set
-| map(if intersects(.; $new_set) then empty else . end) + [$new_set];
-
-[["./assets/minecraft/textures/0.png"]] +
-reduce .[] as $entry ([]; mapatlas($entry))
-' scratch_files/union_atlas.temp | sponge scratch_files/union_atlas.temp
-total_union_atlas=($(jq -r 'length - 1' scratch_files/union_atlas.temp))
 
 mkdir -p scratch_files/spritesheet
+
+if [[ ${#model_list[@]} -eq 0 ]]; then
+  status_message process "No 3D models found, generating fallback sprite sheet"
+  jq -n '[["./assets/minecraft/textures/0.png"]]' | sponge scratch_files/union_atlas.temp
+else
+  status_message process "Generating union atlas arrays for all model textures"
+  jq -s '
+  def namespace: 
+    if contains(":") then sub("\\:(.+)"; "") else "minecraft" end; 
+  [.[]| [.textures[]?] | unique] 
+  | map(map("./assets/" + (. | namespace) + "/textures/" + (. | sub("(.*?)\\:"; "")) + ".png"))
+  ' ${model_list[@]} | sponge scratch_files/union_atlas.temp
+  jq '
+  def intersects(a;b): any(a[]; . as $x | any(b[]; . == $x));
+
+  def mapatlas(set):
+  (set | unique) as $unique_set
+  | (map(if intersects(.; $unique_set) then . else empty end) | add + $unique_set | unique) as $new_set
+  | map(if intersects(.; $new_set) then empty else . end) + [$new_set];
+
+  [["./assets/minecraft/textures/0.png"]] +
+  reduce .[] as $entry ([]; mapatlas($entry))
+  ' scratch_files/union_atlas.temp | sponge scratch_files/union_atlas.temp
+fi
+
+total_union_atlas=($(jq -r 'length - 1' scratch_files/union_atlas.temp))
 status_message process "Generating $((1+${total_union_atlas})) sprite sheets..."
 for i in $(seq 0 ${total_union_atlas})
 do
