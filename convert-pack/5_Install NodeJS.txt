@@ -1,0 +1,22 @@
+﻿2026-06-27T04:14:13.2818132Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T04:14:13.2820523Z ##[group]Run actions/setup-node@v3
+2026-06-27T04:14:13.2821582Z with:
+2026-06-27T04:14:13.2821998Z   node-version: 17
+2026-06-27T04:14:13.2822375Z   always-auth: false
+2026-06-27T04:14:13.2822744Z   check-latest: false
+2026-06-27T04:14:13.2827943Z   token: ***
+2026-06-27T04:14:13.2828296Z ##[endgroup]
+2026-06-27T04:14:13.4471057Z Attempting to download 17...
+2026-06-27T04:14:13.4584475Z (node:2282) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T04:14:13.4586270Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T04:14:13.8107262Z Not found in manifest. Falling back to download directly from Node
+2026-06-27T04:14:13.8783469Z Acquiring 17.9.1 - x64 from https://nodejs.org/dist/v17.9.1/node-v17.9.1-linux-x64.tar.gz
+2026-06-27T04:14:14.1741614Z Extracting ...
+2026-06-27T04:14:14.1866591Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword -C /home/runner/work/_temp/31cd8784-2914-4bde-87c4-021fced15cc6 -f /home/runner/work/_temp/070b39f0-3f39-422e-bcd4-7951511dfeff
+2026-06-27T04:14:15.2294275Z Adding to the cache ...
+2026-06-27T04:14:17.2205461Z Done
+2026-06-27T04:14:17.2209052Z ##[group]Environment details
+2026-06-27T04:14:17.4905294Z node: v17.9.1
+2026-06-27T04:14:17.4905840Z npm: 8.11.0
+2026-06-27T04:14:17.4906291Z yarn: 1.22.22
+2026-06-27T04:14:17.4907746Z ##[endgroup]

@@ -547,7 +547,7 @@ do
   generate_atlas () {
     local texture_list=( $(jq -s --arg index "${1}" -r '(.[1][($index | tonumber)] - .[0] | length > 0) as $fallback_needed | ((.[1][($index | tonumber)] - (.[1][($index | tonumber)] - .[0])) + (if $fallback_needed then ["./assets/minecraft/textures/0.png"] else [] end)) | .[]' scratch_files/all_textures.temp scratch_files/union_atlas.temp) )
     status_message process "Generating sprite sheet ${1} of ${total_union_atlas}"
-    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath ${texture_list[@]} 2>&1 | head -5
+    spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath --engine canvas ${texture_list[@]} 2>&1 | head -5
     echo ${1} >> scratch_files/atlases.csv
   }
   generate_atlas "${i}"
@@ -1009,7 +1009,7 @@ if [ -f sprites.json ]; then
   }
   ' scratch_files/sprite_hashmap.json ./staging/mappings.json | sponge ./staging/mappings.json
 fi
-find ./staging/rptextures -name '*.png' | xargs -P $(nproc) -I{} mogrify -define png:compression-level=9 {}
+find ./staging/rp/textures -name '*.png' | xargs -P $(nproc) -I{} mogrify -define png:compression-level=9 {}
 rm -rf assets && rm -f pack.mcmeta && rm -f pack.png
 if [[ ${save_scratch} != "true" ]] 
 then
