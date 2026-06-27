@@ -6,14 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        In order to file a bug report, you must first attempt to convert your pack via the [pack conversion action](https://github.com/Kas-tle/java2bedrock.sh/issues/new?assignees=&labels=conversion&template=pack-conversion.yml&title=%5BPack%5D%3A+) and include a link to the resulting issue. Any issues without such a link will be automatically rejected. 
-        If you simply need help with running the converter locally, please use the [Converter Help](https://github.com/Kas-tle/java2bedrock.sh/discussions/categories/converter-help) category on the discussions page.
+        In order to file a bug report, you must first attempt to convert your pack via the [pack conversion action](https://github.com/Huy2030/java2bedrock-remake/issues/new?assignees=&labels=conversion&template=pack-conversion.yml&title=%5BPack%5D%3A+) and include a link to the resulting issue. Any issues without such a link will be automatically rejected. 
+        If you simply need help with running the converter locally, please use the [Converter Help](https://github.com/Huy2030/java2bedrock-remake/discussions/categories/converter-help) category on the discussions page.
   - type: input
     id: conversion-issue-link
     attributes:
       label: Conversion Issue Link
       description: Please provide a direct link to the issue that contains the conversion result.
-      placeholder: e.g. https://github.com/Kas-tle/java2bedrock.sh/issues/15
+      placeholder: e.g. https://github.com/Huy2030/java2bedrock-remake/issues
     validations:
       required: true
   - type: textarea

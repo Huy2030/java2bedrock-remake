@@ -63,10 +63,10 @@ jobs:
           fetch-depth: 0
       - name: Enable default asset cache
         id: cache-default-assets
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          path: /home/runner/work/java2bedrock.sh/java2bedrock.sh/staging/default_assets.zip
-          key: ${{ runner.os }}-${{ needs.get-pack-info.outputs.default_assets_version }}
+          path: staging/default_assets.zip
+          key: ${{ runner.os }}-default-assets-${{ needs.get-pack-info.outputs.default_assets_version }}
       - name: Install NodeJS
         uses: actions/setup-node@v3
         with:
@@ -107,12 +107,10 @@ jobs:
       - name: Upload converted pack
         uses: actions/upload-artifact@v4
         with:
-          name: Pack Files
+          name: Geyser Pack Files
           path: |
-            staging/target/packaged/geyser_resources.mcpack
-            staging/target/packaged/geyser_addon.mcaddon
-            staging/target/geyser_mappings.json
-            staging/target/scratch_files.zip
+            staging/geyser_resources.mcpack
+            staging/geyser_mappings.json
             staging/config.json
 
   post-result:

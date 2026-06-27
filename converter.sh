@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 : ${1?'Please specify an input resource pack in the same directory as the script (e.g. ./converter.sh MyResourcePack.zip)'}
 
-# define color placeholders
 C_RED='\e[31m'
 C_GREEN='\e[32m'
 C_YELLOW='\e[33m'
@@ -9,8 +8,6 @@ C_BLUE='\e[36m'
 C_GRAY='\e[37m'
 C_CLOSE='\e[m'
 
-# status message function depending on message type
-# usage: status <completion|process|critical|error|info|plain> <message>
 status_message () {
   case $1 in
     "completion")
@@ -34,8 +31,6 @@ status_message () {
   esac
 }
 
-# dependency check function ensures important required programs are installed
-# usage: dependency_check <program_name> <program_site> <test_command> <grep_expression>
 dependency_check () {
   if command ${3} 2>/dev/null | grep -q "${4}"; then
       status_message completion "Dependency ${1} satisfied"
@@ -45,8 +40,6 @@ dependency_check () {
   fi
 }
 
-# user input function to prompt user for info when needed
-# usage: user_input <prompt_message> <default_value> <value_description>
 user_input () {
   if [[ -z "${!1}" ]]; then
     status_message plain "${2} ${C_YELLOW}[${3}]\n"
@@ -55,12 +48,10 @@ user_input () {
   fi
 }
 
-# wait for jobs function prevents the next job from starting until there is a free CPU thread
 wait_for_jobs () {
   while test $(jobs -p | wc -w) -ge "$((2*$(nproc)))"; do wait -n; done
 }
 
-# ensure input pack exists
 if ! test -f "${1}"; then
    status_message error "Input resource pack ${1} is not in this directory"
    exit 1
@@ -68,7 +59,6 @@ else
   status_message process "Input file ${1} detected"
 fi
 
-# get user defined start flags
 while getopts w:m:a:b:f:v:r:s:u: flag "${@:2}"
 do
     case "${flag}" in
@@ -92,10 +82,8 @@ then
   ulimit -a
   echo | xargs --show-limits
   getconf ARG_MAX
-
 fi
 
-# warn user about limitations of the script
 printf '\e[1;31m%-6s\e[m\n' "
 ███████████████████████████████████████████████████████████████████████████████
 ████████████████████████ # <!> # W A R N I N G # <!> # ████████████████████████
@@ -118,21 +106,17 @@ read -p $'\e[37mTo acknowledge and continue, press enter. To exit, press Ctrl+C.
 '
 fi
 
-# ensure we have all the required dependencies
 dependency_check "jq" "https://stedolan.github.io/jq/download/" "jq --version" "1.6\|1.7"
 dependency_check "sponge" "https://joeyh.name/code/moreutils/" "-v sponge" ""
-# dependency_check "imagemagick" "https://imagemagick.org/script/download.php" "convert --version" ""
 dependency_check "spritesheet-js" "https://www.npmjs.com/package/spritesheet-js" "-v spritesheet-js" ""
 status_message completion "All dependencies have been satisfied\n"
 
-# prompt user for initial configuration
 status_message info "This script will now ask some configuration questions. Default values are yellow. Simply press enter to use the defaults.\n"
 user_input merge_input "Is there an existing bedrock pack in this directory with which you would like the output merged? (e.g. input.mcpack)" "null" "Input pack to merge"
 user_input attachable_material "What material should we use for the attachables?" "entity_alphatest_one_sided" "Attachable material"
 user_input block_material "What material should we use for the blocks?" "alpha_test" "Block material"
 user_input fallback_pack "From what URL should we download the fallback resource pack? (must be a direct link)\n Use 'none' if default resources are not needed." "null" "Fallback pack URL"
 
-# print initial configuration for user and set default values if none were specified
 status_message plain "
 Generating Bedrock 3D resource pack with settings:
 ${C_GRAY}Input pack to merge: ${C_BLUE}${merge_input:=null}
@@ -141,19 +125,16 @@ ${C_GRAY}Block material: ${C_BLUE}${block_material:=alpha_test}
 ${C_GRAY}Fallback pack URL: ${C_BLUE}${fallback_pack:=null}
 "
 
-# decompress our input pack
 status_message process "Decompressing input pack"
 unzip -n -q "${1}"
 status_message completion "Input pack decompressed"
 
-# exit the script if no input pack exists by checking for a pack.mcmeta file
 if [ ! -f pack.mcmeta ]
 then
 	status_message error "Invalid resource pack! The pack.mcmeta file does not exist. Is the resource pack improperly compressed in an enclosing folder?"
   exit 1
 fi
 
-# ensure the directory that would contain predicate definitions exists
 if test -d "./assets/minecraft/models/item"
 then 
   status_message completion "Minecraft namespace item folder found."
@@ -162,7 +143,6 @@ else
   exit 1
 fi
 
-# Download geyser mappings
 status_message process "Downloading the latest geyser item mappings"
 mkdir -p ./scratch_files
 printf "\e[3m\e[37m"
@@ -173,8 +153,6 @@ COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o scratch_files/item_texture.jso
 echo
 printf "${C_CLOSE}"
 
-# setup our initial config by iterating over all json files in the block and item folders
-# technically we only need to iterate over actual item models that contain overrides, but the constraints of bash would likely make such an approach less efficent 
 status_message process "Iterating through all vanilla associated model JSONs to generate initial predicate config\nOn a large pack, this may take some time...\n"
 
 jq --slurpfile item_texture scratch_files/item_texture.json --slurpfile item_mappings scratch_files/item_mappings.json -n '
@@ -222,11 +200,9 @@ if contains(":") then sub("\\:(.+)"; "") else "minecraft" end
 ' ./assets/minecraft/models/item/*.json > config.json || { status_message error "Invalid JSON exists in block or item folder! See above log."; exit 1; }
 status_message completion "Initial predicate config generated"
 
-# get a bash array of all model json files in our resource pack
 status_message process "Generating an array of all model JSON files to crosscheck with our predicate config"
 json_dir=($(find ./assets/**/models -type f -name '*.json'))
 
-# ensure all our reference files in config.json exist, and delete the entry if they do not
 status_message critical "Removing config entries that do not have an associated JSON file in the pack"
 jq '
 
@@ -237,11 +213,9 @@ map_values(if real_file(.path) != null then . else empty end)
 
 ' config.json --args ${json_dir[@]} | sponge config.json
 
-# get a bash array of all our input models
 status_message process "Creating a bash array for remaing models in our predicate config"
 model_array=($(jq -r '[.[].path] | unique | .[]' config.json))
 
-# find initial parental information
 status_message process "Doing an initial sweep for level 1 parentals"
 jq -n '
 
@@ -255,7 +229,6 @@ inputs | {
 
 ' ${model_array[@]} | sponge scratch_files/parents.json
 
-# add initial parental information to config.json
 status_message critical "Removing config entries with non-supported parentals\n"
 jq -s '
 
@@ -286,7 +259,6 @@ def gtest($input_g):
 
 ' scratch_files/parents.json config.json | sponge config.json
 
-# obtain hashes of all model predicate info to ensure consistent model naming
 jq -r '.[] | [.geyserID, (.item + "_c" + (.nbt.CustomModelData | tostring) + "_d" + (.nbt.Damage | tostring) + "_u" + (.nbt.Unbreakable | tostring)), .path] | @tsv | gsub("\\t";",")' config.json > scratch_files/paths.csv
 
 function write_hash () { 
@@ -311,25 +283,20 @@ jq --slurpfile hashmap scratch_files/hashmap.json '
     )
 ' config.json | sponge config.json
 
-# create our initial directories for bp & rp
 status_message process "Generating initial directory strucutre for our bedrock packs"
-mkdir -p ./target/rp/models/blocks && mkdir -p ./target/rp/textures && mkdir -p ./target/rp/attachables && mkdir -p ./target/rp/animations && mkdir -p ./target/bp/blocks && mkdir -p ./target/bp/items
+mkdir -p ./staging/rp/models/blocks && mkdir -p ./staging/rp/textures && mkdir -p ./staging/rp/attachables && mkdir -p ./staging/rp/animations && mkdir -p ./staging/bp/blocks && mkdir -p ./staging/bp/items
 
-# copy over our pack.png if we have one
 if test -f "./pack.png"; then
-    cp ./pack.png ./target/rp/pack_icon.png && cp ./pack.png ./target/bp/pack_icon.png
+    cp ./pack.png ./staging/rp/pack_icon.png && cp ./pack.png ./staging/bp/pack_icon.png
 fi
 
-# generate uuids for our manifests
 uuid1=($(uuidgen))
 uuid2=($(uuidgen))
 uuid3=($(uuidgen))
 uuid4=($(uuidgen))
 
-# get pack description if we have one
 pack_desc="$(jq -r '(.pack.description // "Geyser 3D Items Resource Pack")' ./pack.mcmeta)"
 
-# generate rp manifest.json
 status_message process "Generating resource pack manifest"
 jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid2 "${uuid2}" -n '
 {
@@ -350,9 +317,8 @@ jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid2 "${uuid2
         }
     ]
 }
-' | sponge ./target/rp/manifest.json
+' | sponge ./staging/rp/manifest.json
 
-# generate bp manifest.json
 status_message process "Generating behavior pack manifest"
 jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid3 "${uuid3}" --arg uuid4 "${uuid4}" -n '
 {
@@ -379,31 +345,12 @@ jq -c --arg pack_desc "${pack_desc}" --arg uuid1 "${uuid1}" --arg uuid3 "${uuid3
         }
     ]
 }
-' | sponge ./target/bp/manifest.json
+' | sponge ./staging/bp/manifest.json
 
-# generate rp terrain_texture.json
-status_message process "Generating resource pack terrain texture definition"
-jq -nc '
-{
-  "resource_pack_name": "geyser_custom",
-  "texture_name": "atlas.terrain",
-  "texture_data": {
-  }
-}
-' | sponge ./target/rp/textures/terrain_texture.json
-
-# generate rp item_texture.json
 status_message process "Generating resource pack item texture definition"
-jq -nc '
-{
-  "resource_pack_name": "geyser_custom",
-  "texture_name": "atlas.items",
-  "texture_data": {}
-}
-' | sponge ./target/rp/textures/item_texture.json
+jq -nc '{"texture_data":{}}' | sponge ./staging/rp/textures/item_texture.json
 
 status_message process "Generating resource pack disabling animation"
-# generate our disabling animation
 jq -nc '
 {
   "format_version": "1.8.0",
@@ -419,10 +366,8 @@ jq -nc '
     }
   }
 }
-' | sponge ./target/rp/animations/animation.geyser_custom.disable.json
+' | sponge ./staging/rp/animations/animation.geyser_custom.disable.json
 
-# DO DEFAULT ASSETS HERE!!
-# get the current default textures and merge them with our rp
 if [[ ${fallback_pack} != none ]] && [[ ! -f default_assets.zip ]]
 then
   status_message process "Now downloading the fallback resource pack:"
@@ -461,14 +406,11 @@ then
   cp -n -r "./defaultassetholding/${root_folder}assets/minecraft/models"/* './assets/minecraft/models/'
   status_message completion "Fallback resources merged with target pack"
   rm -rf defaultassetholding
-  #rm -f default_assets.zip
   status_message critical "Extraneous fallback resources deleted\n"
 fi
 
-# generate a fallback texture
-convert -size 16x16 xc:\#FFFFFF ./assets/minecraft/textures/0.png
+convert -size 16x16 xc:none ./assets/minecraft/textures/0.png
 
-# make sure we crop all mcmeta associated png files
 status_message process "Cropping animated textures"
 for i in $(find ./assets/**/textures -type f -name "*.mcmeta" | sed 's/\.mcmeta//'); do 
 convert ${i} -set option:distort:viewport "%[fx:min(w,h)]x%[fx:min(w,h)]" -distort affine "0,0 0,0" -define png:format=png8 -clamp ${i} 2> /dev/null
@@ -491,7 +433,6 @@ function ProgressBar {
 printf "\r\e[37m█\e[m \e[37m${_fill// /█}\e[m\e[37m${_empty// /•}\e[m \e[37m█\e[m \e[33m${_progress}％\e[m\n"
 }
 
-# first, deal with parented models
 while IFS=, read -r file gid parental namespace model_path model_name path_hash
 do
   resolve_parental () {
@@ -509,7 +450,6 @@ do
     local display="$(jq -rc '.display' ${file} | tee scratch_files/${gid}.display.temp)"
     status_message process "Locating parental info for child model with GeyserID ${gid}"
 
-    # itterate through parented models until they all have geometry, display, and textures
     until [[ ${elements} != null && ${textures} != null && ${display} != null ]] || [[ ${parental} = "./assets/minecraft/models/builtin/generated.json" ]] || [[ ${parental} = null ]]
     do
       if [[ ${elements} = null ]]
@@ -529,7 +469,6 @@ do
       local texture_0="$(jq -rc 'def namespace: if contains(":") then sub("\\:(.+)"; "") else "minecraft" end; ("./assets/" + ([.[]][0]? | namespace) + "/textures/" + (([.[]][0]? // empty) | sub("(.*?)\\:"; "")) + ".png") // "null"' scratch_files/${gid}.textures.temp)"
     done
 
-    # if we can, generate a model now
     if [[ ${elements} != null && ${textures} != null ]]
     then
       jq -n --slurpfile jelements scratch_files/${gid}.elements.temp --slurpfile jtextures scratch_files/${gid}.textures.temp --slurpfile jdisplay scratch_files/${gid}.display.temp '
@@ -542,7 +481,6 @@ do
       local tot_pos=$(wc -l < scratch_files/count.csv)
       status_message completion "Located all parental info for Child ${gid}\n$(ProgressBar ${tot_pos} ${_end})"
       echo
-    # check if this is a 2d item dervived from ./assets/minecraft/models/builtin/generated
     elif [[ ${textures} != null && ${parental} = "./assets/minecraft/models/builtin/generated.json" && -f "${texture_0}" ]]
     then
       jq -n --slurpfile jelements scratch_files/${gid}.elements.temp --slurpfile jtextures scratch_files/${gid}.textures.temp --slurpfile jdisplay scratch_files/${gid}.display.temp '
@@ -550,17 +488,14 @@ do
         "textures": ([$jtextures[]][0])
       } + (if $jdisplay then ({"display": ($jdisplay[])}) else {} end)
       ' | sponge ${file}
-      # copy texture directly to the rp
-      mkdir -p "./target/rp/textures/${namespace}/${model_path}"
-      cp "${texture_0}" "./target/rp/textures/${namespace}/${model_path}/${model_name}.png"
-      # add texture to item atlas
+      mkdir -p "./staging/rp/textures/${namespace}/${model_path}"
+      cp "${texture_0}" "./staging/rp/textures/${namespace}/${model_path}/${model_name}.png"
       echo "${path_hash},textures/${namespace}/${model_path}/${model_name}" >> scratch_files/icons.csv
       echo "${gid}" >> scratch_files/generated.csv
       echo >> scratch_files/count.csv
       local tot_pos=$(wc -l < scratch_files/count.csv)
       status_message completion "Located all parental info for 2D Child ${gid}\n$(ProgressBar ${tot_pos} ${_end})"
       echo
-    # otherwise, remove it from our config
     else
       echo "${gid}" >> scratch_files/deleted.csv
       echo >> scratch_files/count.csv
@@ -574,9 +509,8 @@ do
   resolve_parental "${file}" "${gid}" "${parental}" "${namespace}" "${model_path}" "${model_name}" "${path_hash}" &
 
 done < scratch_files/pa.csv
-wait # wait for all the jobs to finish
+wait
 
-# update generated models in config
 if [[ -f scratch_files/generated.csv ]]
 then
   jq -cR 'split(",")' scratch_files/generated.csv | jq -s 'map({(.[0]): true}) | add' > scratch_files/generated.json
@@ -590,7 +524,6 @@ then
   ' scratch_files/generated.json config.json | sponge config.json
 fi
 
-# add icon textures to item atlas
 if [[ -f scratch_files/icons.csv ]]
 then
   jq -cR 'split(",")' scratch_files/icons.csv | jq -s 'map({(.[0]): {"textures": (.[1] | gsub("//"; "/"))}}) | add' > scratch_files/icons.json
@@ -598,10 +531,9 @@ then
   .[0] as $icons
   | .[1] 
   | .texture_data += $icons
-  ' scratch_files/icons.json ./target/rp/textures/item_texture.json | sponge ./target/rp/textures/item_texture.json
+  ' scratch_files/icons.json ./staging/rp/textures/item_texture.json | sponge ./staging/rp/textures/item_texture.json
 fi
 
-# delete unsuitable models
 if [[ -f scratch_files/deleted.csv ]]
 then
   jq -cR 'split(",")' scratch_files/deleted.csv  | jq -s '.' > scratch_files/deleted.json
@@ -609,14 +541,10 @@ then
 fi
 
 status_message process "Compiling final model list"
-# get our final 3d model list from the config
 model_list=( $(jq -r '.[] | select(.generated == false) | .path' config.json) )
 
-# get our final texture list to be atlased
-# get a bash array of all texture files in our resource pack
 status_message process "Generating an array of all model PNG files to crosscheck with our atlas"
 jq -n '$ARGS.positional' --args $(find ./assets/**/textures -type f -name '*.png') | sponge scratch_files/all_textures.temp
-# get bash array of all texture files listed in our models
 status_message process "Generating union atlas arrays for all model textures"
 jq -s '
 def namespace: 
@@ -642,7 +570,6 @@ status_message process "Generating $((1+${total_union_atlas})) sprite sheets..."
 for i in $(seq 0 ${total_union_atlas})
 do
   generate_atlas () {
-    # find the union of all texture files listed in this atlas and all texture files in our resource pack
     local texture_list=( $(jq -s --arg index "${1}" -r '(.[1][($index | tonumber)] - .[0] | length > 0) as $fallback_needed | ((.[1][($index | tonumber)] - (.[1][($index | tonumber)] - .[0])) + (if $fallback_needed then ["./assets/minecraft/textures/0.png"] else [] end)) | .[]' scratch_files/all_textures.temp scratch_files/union_atlas.temp) )
     status_message process "Generating sprite sheet ${1} of ${total_union_atlas}"
     spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath ${texture_list[@]} 1> /dev/null
@@ -651,20 +578,14 @@ do
   wait_for_jobs
   generate_atlas "${i}" &
 done
-wait # wait for all the jobs to finish
+wait
 
-# generate terrain texture atlas
 jq -cR 'split(",")' scratch_files/atlases.csv | jq -s 'map({("gmdl_atlas_" + .[0]): {"textures": ("textures/" + .[0])}}) | add' > scratch_files/atlases.json
-jq -s '
-.[0] as $atlases
-| .[1] 
-| .texture_data += $atlases
-' scratch_files/atlases.json ./target/rp/textures/terrain_texture.json | sponge ./target/rp/textures/terrain_texture.json
+jq -s '.[0] as $atlases | .[1] | .texture_data += $atlases' scratch_files/atlases.json ./staging/rp/textures/terrain_texture.json | sponge ./staging/rp/textures/terrain_texture.json
 
 status_message completion "All sprite sheets generated"
-mv scratch_files/spritesheet/*.png ./target/rp/textures
+mv scratch_files/spritesheet/*.png ./staging/rp/textures
 
-# begin conversion
 jq -r '.[] | [.path, .geyserID, .generated, .namespace, .model_path, .model_name, .path_hash, .geometry] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/all.csv
 
 while IFS=, read -r file gid generated namespace model_path model_name path_hash geometry
@@ -679,7 +600,6 @@ do
     local path_hash="${7}"
     local geometry="${8}"
 
-    # find which texture atlas we will be using if not generated
     if [[ ${generated} = "false" ]]
     then
       local atlas_index=$(jq -r -s 'def namespace: if contains(":") then sub("\\:(.+)"; "") else "minecraft" end; def intersects(a;b): any(a[]; . as $x | any(b[]; . == $x)); (.[0] | [.textures[]] | map("./assets/" + (. | namespace) + "/textures/" + (. | sub("(.*?)\\:"; "")) + ".png")) as $inp | [(.[1] | (map(if intersects(.;$inp) then . else empty end)[])) as $entry | .[1] | to_entries[] | select(.value == $entry).key][0] // 0' ${file} scratch_files/union_atlas.temp)
@@ -688,7 +608,7 @@ do
     fi
 
     status_message process "Starting conversion of model with GeyserID ${gid}"
-    mkdir -p ./target/rp/models/blocks/${namespace}/${model_path}
+    mkdir -p ./staging/rp/models/blocks/${namespace}/${model_path}
     jq --slurpfile atlas scratch_files/spritesheet/${atlas_index}.json --arg generated "${generated}" --arg binding "c.item_slot == 'head' ? 'head' : q.item_slot_to_bone_name(c.item_slot)" --arg geometry "${geometry}" -c '
     .textures as $texture_list |
     def namespace: if contains(":") then sub("\\:(.+)"; "") else "minecraft" end;
@@ -780,12 +700,10 @@ do
             }) end] + (pivot_groups | map(del(.cubes[].rotation)) | to_entries | map( (.value.name = "rot_\(1+.key)" ) | .value)))
         }]
       }
-      ' ${file} | sponge ./target/rp/models/blocks/${namespace}/${model_path}/${model_name}.json
+      ' ${file} | sponge ./staging/rp/models/blocks/${namespace}/${model_path}/${model_name}.json
 
-      # generate our rp animations via display settings
-      mkdir -p ./target/rp/animations/${namespace}/${model_path}
+      mkdir -p ./staging/rp/animations/${namespace}/${model_path}
       jq -c --arg geometry "${geometry}" '
-
       {
         "format_version": "1.8.0",
         "animations": {
@@ -892,13 +810,11 @@ do
           }
         }
       } | walk( if type == "object" then with_entries(select(.value != null)) else . end)
+      ' ${file} | sponge ./staging/rp/animations/${namespace}/${model_path}/animation.${model_name}.json
 
-      ' ${file} | sponge ./target/rp/animations/${namespace}/${model_path}/animation.${model_name}.json
-
-      # generate our bp block definition if this is a 3D item
       if [[ ${generated} = false ]]
       then
-        mkdir -p ./target/bp/blocks/${namespace}/${model_path}
+        mkdir -p ./staging/bp/blocks/${namespace}/${model_path}
         jq -c -n --arg atlas_index "${atlas_index}" --arg block_material "${block_material}" --arg path_hash "${path_hash}" --arg geometry "${geometry}" '
         {
             "format_version": "1.16.100",
@@ -919,20 +835,17 @@ do
                     "minecraft:placement_filter": {
                       "conditions": [
                           {
-                              "allowed_faces": [
-                              ],
-                              "block_filter": [
-                              ]
+                              "allowed_faces": [],
+                              "block_filter": []
                           }
                       ]
                     }
                 }
             }
         }
-        ' | sponge ./target/bp/blocks/${namespace}/${model_path}/${model_name}.json
-      # generate our bp item definition if this is a 2D item
+        ' | sponge ./staging/bp/blocks/${namespace}/${model_path}/${model_name}.json
       else
-        mkdir -p ./target/bp/items/${namespace}/${model_path}
+        mkdir -p ./staging/bp/items/${namespace}/${model_path}
         jq -c -n --arg path_hash "${path_hash}" '
         {
             "format_version": "1.16.100",
@@ -948,11 +861,10 @@ do
                 }
             }
         }
-        ' | sponge ./target/bp/items/${namespace}/${model_path}/${model_name}.${path_hash}.json
+        ' | sponge ./staging/bp/items/${namespace}/${model_path}/${model_name}.${path_hash}.json
       fi
 
-      # generate our rp attachable definition
-      mkdir -p ./target/rp/attachables/${namespace}/${model_path}
+      mkdir -p ./staging/rp/attachables/${namespace}/${model_path}
       jq -c -n --arg generated "${generated}" --arg atlas_index "${atlas_index}" --arg attachable_material "${attachable_material}" --arg v_main "v.main_hand = c.item_slot == 'main_hand';" --arg v_off "v.off_hand = c.item_slot == 'off_hand';" --arg v_head "v.head = c.item_slot == 'head';" --arg path_hash "${path_hash}" --arg namespace "${namespace}" --arg model_path "${model_path}" --arg model_name "${model_name}" --arg geometry "${geometry}" '
       def tobool: if .=="true" then true elif .=="false" then false else null end;
       {
@@ -994,10 +906,8 @@ do
           }
         }
       }
+      ' | sponge ./staging/rp/attachables/${namespace}/${model_path}/${model_name}.${path_hash}.attachable.json
 
-      ' | sponge ./target/rp/attachables/${namespace}/${model_path}/${model_name}.${path_hash}.attachable.json
-
-      # progress
       echo >> scratch_files/count.csv
       local tot_pos=$((cur_pos + $(wc -l < scratch_files/count.csv)))
       status_message completion "${gid} converted\n$(ProgressBar ${tot_pos} ${_end})"
@@ -1007,109 +917,56 @@ do
    convert_model "${file}" "${gid}" "${generated}" "${namespace}" "${model_path}" "${model_name}" "${path_hash}" "${geometry}" &
 
 done < scratch_files/all.csv
-wait # wait for all the jobs to finish
+wait
 
-# write lang file US
-status_message process "Writing en_US and en_GB lang files"
-mkdir ./target/rp/texts
-jq -r '
-
-def format: (.[0:1] | ascii_upcase ) + (.[1:] | gsub( "_(?<a>[a-z])"; (" " + .a) | ascii_upcase));
-.[]|"\("item.geyser_custom:" + .path_hash + ".name")=\(.item | format)"
-
-' config.json | sponge ./target/rp/texts/en_US.lang
-
-# copy US lang to GB
-cp ./target/rp/texts/en_US.lang ./target/rp/texts/en_GB.lang
-
-# write supported languages file
-jq -n '["en_US","en_GB"]' | sponge ./target/rp/texts/languages.json
-status_message completion "en_US and en_GB lang files written\n"
-
-# Ensure images are in the correct color space
 status_message process "Setting all images to png8"
-find ./target/rp/textures -name '*.png' -exec mogrify -define png:format=png8  {} +
+find ./staging/rp/textures -name '*.png' -exec mogrify -define png:format=png8  {} +
 status_message completion "All images set to png8"
 
 if [[ ${rename_model_files} == "true" ]]
 then
     status_message process "Consolidating model files"
     function consolidate_files () {
-	## Get a list of all files
-	list=$(find ${1} -mindepth 2 -type f -print)
-	nr=1
-	
-	## Move all files that are unique
+	local list=$(find ${1} -mindepth 2 -type f -print)
+	local nr=1
 	find ${1} -mindepth 2 -type f -print0 | while IFS= read -r -d '' file; do
 	    mv -n "$file" ${1}/
 	done
 	list=$(find ${1} -mindepth 2 -type f -print)
-	
-	## Checking which files need to be renamed
 	while [[ $list != '' ]] ; do
-	   ##Remaming the un-moved files to unique names and move the renamed files
 	   find ${1} -mindepth 2 -type f -print0 | while IFS= read -r -d '' file; do
 	       current_file=$(basename "$file")
 	       mv -n "$file" "./${nr}${current_file}"
 	   done
-	   ## Incrementing counter to prefix to file name
 	   nr=$((nr+1))
 	   list=$(find ${1} -mindepth 2 -type f -print)
 	done
      }
-     consolidate_files './target/rp/animations'
-     rm -rf ./target/rp/animations/*/
-     consolidate_files './target/rp/models/blocks'
-     rm -rf ./target/rp/models/blocks/*/
-     consolidate_files './target/rp/attachables'
-     rm -rf rm -rf ./target/rp/attachables/*/
+     consolidate_files './staging/rp/animations'
+     rm -rf ./staging/rp/animations/*/
+     consolidate_files './staging/rp/models/blocks'
+     rm -rf ./staging/rp/models/blocks/*/
+     consolidate_files './staging/rp/attachables'
+     rm -rf rm -rf ./staging/rp/attachables/*/
 fi
 
-# attempt to merge with existing pack if input was provided
 if test -f ${merge_input}; then
   mkdir inputbedrockpack
   status_message process "Decompressing input bedrock pack"
   unzip -q ${merge_input} -d ./inputbedrockpack
   status_message process "Merging input bedrock pack with generated bedrock assets"
-  cp -n -r "./inputbedrockpack"/* './target/rp/'
-  if test -f ./inputbedrockpack/textures/terrain_texture.json; then
-    status_message process "Merging terrain texture files"
-    jq -s '
-    {
-      "resource_pack_name": "geyser_custom",
-      "texture_name": "atlas.terrain",
-      "texture_data": (.[1].texture_data + .[0].texture_data)
-    }
-    ' ./target/rp/textures/terrain_texture.json ./inputbedrockpack/textures/terrain_texture.json | sponge ./target/rp/textures/terrain_texture.json
-  fi
+  cp -n -r "./inputbedrockpack"/* './staging/rp/'
   if test -f ./inputbedrockpack/textures/item_texture.json; then
     status_message process "Merging item texture files"
-    jq -s '
-    {
-      "resource_pack_name": "geyser_custom",
-      "texture_name": "atlas.items",
-      "texture_data": (.[1].texture_data + .[0].texture_data)
-    }
-    ' ./target/rp/textures/item_texture.json ./inputbedrockpack/textures/item_texture.json | sponge ./target/rp/textures/item_texture.json
+    jq -s '{"texture_data":(.[1].texture_data + .[0].texture_data)}' \
+    ./staging/rp/textures/item_texture.json ./inputbedrockpack/textures/item_texture.json | sponge ./staging/rp/textures/item_texture.json
   fi
-  if test -f ./inputbedrockpack/texts/languages.json; then
-    status_message process "Merging languages file"
-    jq -s '.[0] + .[1] | unique' | sponge ./target/rp/texts/languages.json
-  fi
-  if test -f ./inputbedrockpack/texts/en_US.lang; then
-    status_message process "Merging en_US lang file"
-    cat ./inputbedrockpack/texts/en_US.lang >> ./target/rp/texts/en_US.lang
-  fi
-  if test -f ./inputbedrockpack/texts/en_GB.lang; then
-    status_message process "Merging en_GB lang file"
-    cat ./inputbedrockpack/texts/en_GB.lang >> ./target/rp/texts/en_GB.lang
-  fi
-  status_message critical "Deleting input bedrock pack scratch direcotry"
+  status_message critical "Deleting input bedrock pack scratch directory"
   rm -rf inputbedrockpack
   status_message completion "Input bedrock pack merged with generated assets\n"
 fi
 
-status_message process "Creating Geyser mappings in target directory"
+status_message process "Creating Geyser mappings in staging directory"
 echo
 jq '
 ([map(
@@ -1134,9 +991,8 @@ jq '
     "format_version": "1",
     "items": $mappings
   }
-' config.json | sponge ./target/geyser_mappings.json
+' config.json | sponge ./staging/geyser_mappings.json
 
-# Add sprites if sprites.json exists in the root pack
 if [ -f sprites.json ]; then
   status_message process "Adding provided sprite paths from sprites.json"
   jq -r '
@@ -1154,7 +1010,7 @@ if [ -f sprites.json ]; then
   }
  
   while IFS=, read -r predicate icon
-    do write_id_hash "${predicate}" "${icon}"  "scratch_files/sprite_hashes.csv" &
+    do write_id_hash "${predicate}" "${icon}" "scratch_files/sprite_hashes.csv" &
   done < scratch_files/sprites.csv > /dev/null
 
   jq -cR 'split(",")' scratch_files/sprite_hashes.csv | jq -s 'map({("gmdl_" + .[1]): {"textures": .[0]}}) | add' > scratch_files/sprite_hashmap.json
@@ -1163,7 +1019,7 @@ if [ -f sprites.json ]; then
   .[0] as $icon_sprites
   | .[1] 
   | .texture_data += $icon_sprites
-  ' scratch_files/sprite_hashmap.json ./target/rp/textures/item_texture.json | sponge ./target/rp/textures/item_texture.json
+  ' scratch_files/sprite_hashmap.json ./staging/rp/textures/item_texture.json | sponge ./staging/rp/textures/item_texture.json
   
   jq -s '
   {
@@ -1178,31 +1034,25 @@ if [ -f sprites.json ]; then
     ))}
     ) | add)
   }
-  ' scratch_files/sprite_hashmap.json ./target/geyser_mappings.json | sponge ./target/geyser_mappings.json
-  
+  ' scratch_files/sprite_hashmap.json ./staging/geyser_mappings.json | sponge ./staging/geyser_mappings.json
 fi
 
-# cleanup
 rm -rf assets && rm -f pack.mcmeta && rm -f pack.png
 if [[ ${save_scratch} != "true" ]] 
 then
   rm -rf scratch_files
   status_message critical "Deleted scratch files"
 else
-  cd ./scratch_files > /dev/null && zip -rq8 scratch_files.zip . -x "*/.*" && cd .. > /dev/null && mv ./scratch_files/scratch_files.zip ./target/scratch_files.zip
+  cd ./scratch_files > /dev/null && zip -rq8 scratch_files.zip . -x "*/.*" && cd .. > /dev/null && mv ./scratch_files/scratch_files.zip ./staging/scratch_files.zip
   status_message completion "Archived scratch files\n"
 fi
 
+status_message process "Compressing output pack"
+cd ./staging/rp > /dev/null && zip -rq8 geyser_resources.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./staging/rp/geyser_resources.mcpack ./staging/geyser_resources.mcpack
+rm -rf ./staging/rp ./staging/bp
 
-status_message process "Compressing output packs"
-mkdir ./target/packaged
-cd ./target/rp > /dev/null && zip -rq8 geyser_resources_preview.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./target/rp/geyser_resources_preview.mcpack ./target/packaged/geyser_resources_preview.mcpack
-cd ./target/bp > /dev/null && zip -rq8 geyser_behaviors_preview.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./target/bp/geyser_behaviors_preview.mcpack ./target/packaged/geyser_behaviors_preview.mcpack
-cd ./target/packaged > /dev/null && zip -rq8 geyser_addon.mcaddon . -i "*_preview.mcpack" && cd ../.. > /dev/null
-jq 'delpaths([paths | select(.[-1] | strings | startswith("gmdl_atlas_"))])' ./target/rp/textures/terrain_texture.json | sponge ./target/rp/textures/terrain_texture.json
-cd ./target/rp > /dev/null && zip -rq8 geyser_resources.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./target/rp/geyser_resources.mcpack ./target/packaged/geyser_resources.mcpack
-mkdir ./target/unpackaged
-mv ./target/rp ./target/unpackaged/rp && mv ./target/bp ./target/unpackaged/bp
+cp config.json ./staging/config.json
+rm -f config.json
 
 echo
 printf "\e[32m[+]\e[m \e[1m\e[37mConversion Process Complete\e[m\n\n\e[37mExiting...\e[m\n\n"
