@@ -353,7 +353,7 @@ jq -nc '{"texture_data":{}}' | sponge ./staging/rp/textures/item_texture.json
 status_message process "Generating resource pack disabling animation"
 jq -nc '
 {
-  "format_version": "1.8.0",
+  "format_version": "1.10.0",
   "animations": {
     "animation.geyser_custom.disable": {
       "loop": true,
@@ -373,7 +373,7 @@ then
   status_message process "Now downloading the fallback resource pack:"
   printf "\e[3m\e[37m"
   echo
-  COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o default_assets.zip https://github.com/InventivetalentDev/minecraft-assets/zipball/refs/tags/${default_asset_version:=1.21.0}
+  COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o default_assets.zip https://github.com/InventivetalentDev/minecraft-assets/zipball/refs/tags/${default_asset_version:=1.21}
   echo
   printf "${C_CLOSE}"
   status_message completion "Fallback resources downloaded"
@@ -664,10 +664,10 @@ do
       }))) else {} end
       ;
       {
-        "format_version": "1.16.0",
+        "format_version": "1.21.0",
         "minecraft:geometry": [{
           "description": {
-            "identifier": ( "geometry.geyser_custom." + ($geometry)),
+            "identifier": ( "geometry." + ($geometry)),
             "texture_width": 16,
             "texture_height": 16,
             "visible_bounds_width": 4,
@@ -705,7 +705,7 @@ do
       mkdir -p ./staging/rp/animations/${namespace}/${model_path}
       jq -c --arg geometry "${geometry}" '
       {
-        "format_version": "1.8.0",
+        "format_version": "1.10.0",
         "animations": {
           ("animation.geyser_custom." + ($geometry) + ".thirdperson_main_hand"): {
             "loop": true,
@@ -831,7 +831,7 @@ do
                             "ambient_occlusion": false
                         }
                     },
-                    "minecraft:geometry": ("geometry.geyser_custom." + $geometry),
+                    "minecraft:geometry": ("geometry." + $geometry),
                     "minecraft:placement_filter": {
                       "conditions": [
                           {
@@ -881,7 +881,7 @@ do
               "enchanted": "textures/misc/enchanted_item_glint"
             },
             "geometry": {
-              "default": ("geometry.geyser_custom." + $geometry)
+              "default": ("geometry." + $geometry)
             },
             "scripts": {
               "pre_animation": [$v_main, $v_off, $v_head],
