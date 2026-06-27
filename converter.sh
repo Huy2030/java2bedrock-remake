@@ -147,9 +147,9 @@ status_message process "Downloading the latest geyser item mappings"
 mkdir -p ./scratch_files
 printf "\e[3m\e[37m"
 echo
-COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o scratch_files/item_mappings.json https://raw.githubusercontent.com/GeyserMC/mappings/master/items.json
+curl -sL -o scratch_files/item_mappings.json https://raw.githubusercontent.com/GeyserMC/mappings/master/items.json
 echo
-COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o scratch_files/item_texture.json https://raw.githubusercontent.com/Kas-tle/java2bedrockMappings/main/item_texture.json
+curl -sL -o scratch_files/item_texture.json https://raw.githubusercontent.com/Kas-tle/java2bedrockMappings/main/item_texture.json
 echo
 printf "${C_CLOSE}"
 
@@ -355,7 +355,7 @@ jq -nc '
 {
   "format_version": "1.10.0",
   "animations": {
-    "animation.geyser_custom.disable": {
+    "animation..disable": {
       "loop": true,
       "override_previous_animation": true,
       "bones": {
@@ -366,14 +366,14 @@ jq -nc '
     }
   }
 }
-' | sponge ./staging/rp/animations/animation.geyser_custom.disable.json
+' | sponge ./staging/rp/animations/animation..disable.json
 
 if [[ ${fallback_pack} != none ]] && [[ ! -f default_assets.zip ]]
 then
   status_message process "Now downloading the fallback resource pack:"
   printf "\e[3m\e[37m"
   echo
-  COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o default_assets.zip https://github.com/InventivetalentDev/minecraft-assets/zipball/refs/tags/${default_asset_version:=1.21}
+  curl -sL -o default_assets.zip https://github.com/InventivetalentDev/minecraft-assets/zipball/refs/tags/${default_asset_version:=1.21}
   echo
   printf "${C_CLOSE}"
   status_message completion "Fallback resources downloaded"
@@ -383,7 +383,7 @@ if [[ ${fallback_pack} != null &&  ${fallback_pack} != none ]]
 then
   printf "\e[3m\e[37m"
   echo
-  COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o provided_assets.zip "${fallback_pack}"
+  curl -sL -o provided_assets.zip "${fallback_pack}"
   echo
   printf "${C_CLOSE}"
   status_message completion "Provided resources downloaded"
@@ -707,7 +707,7 @@ do
       {
         "format_version": "1.10.0",
         "animations": {
-          ("animation.geyser_custom." + ($geometry) + ".thirdperson_main_hand"): {
+          ("animation.." + ($geometry) + ".thirdperson_main_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom_x": (if .display.thirdperson_righthand then {
@@ -727,7 +727,7 @@ do
               }
             }
           },
-          ("animation.geyser_custom." + ($geometry) + ".thirdperson_off_hand"): {
+          ("animation.." + ($geometry) + ".thirdperson_off_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom_x": (if .display.thirdperson_lefthand then {
@@ -747,7 +747,7 @@ do
               }
             }
           },
-          ("animation.geyser_custom." + ($geometry) + ".head"): {
+          ("animation.." + ($geometry) + ".head"): {
             "loop": true,
             "bones": {
               "geyser_custom_x": {
@@ -766,7 +766,7 @@ do
               }
             }
           },
-          ("animation.geyser_custom." + ($geometry) + ".firstperson_main_hand"): {
+          ("animation.." + ($geometry) + ".firstperson_main_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom": {
@@ -787,7 +787,7 @@ do
               } else null end)
             }
           },
-          ("animation.geyser_custom." + ($geometry) + ".firstperson_off_hand"): {
+          ("animation.." + ($geometry) + ".firstperson_off_hand"): {
             "loop": true,
             "bones": {
               "geyser_custom": {
@@ -895,12 +895,12 @@ do
               ]
             },
             "animations": {
-              "thirdperson_main_hand": ("animation.geyser_custom." + $geometry + ".thirdperson_main_hand"),
-              "thirdperson_off_hand": ("animation.geyser_custom." + $geometry + ".thirdperson_off_hand"),
-              "thirdperson_head": ("animation.geyser_custom." + $geometry + ".head"),
-              "firstperson_main_hand": ("animation.geyser_custom." + $geometry + ".firstperson_main_hand"),
-              "firstperson_off_hand": ("animation.geyser_custom." + $geometry + ".firstperson_off_hand"),
-              "firstperson_head": "animation.geyser_custom.disable"
+              "thirdperson_main_hand": ("animation.." + $geometry + ".thirdperson_main_hand"),
+              "thirdperson_off_hand": ("animation.." + $geometry + ".thirdperson_off_hand"),
+              "thirdperson_head": ("animation.." + $geometry + ".head"),
+              "firstperson_main_hand": ("animation.." + $geometry + ".firstperson_main_hand"),
+              "firstperson_off_hand": ("animation.." + $geometry + ".firstperson_off_hand"),
+              "firstperson_head": "animation..disable"
             },
             "render_controllers": [ "controller.render.item_default" ]
           }
