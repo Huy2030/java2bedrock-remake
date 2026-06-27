@@ -383,9 +383,6 @@ done
 
 status_message completion "Initial pack setup complete\n"
 
-status_message process "Normalizing PNG files for spritesheet generation"
-find ./assets -path '*/textures/*.png' ! -name '*.mcmeta' -exec mogrify -define png:format=png8 -type TrueColorAlpha {} + 2>/dev/null || true
-
 jq -r '.[] | select(.parent != null) | [.path, .geyserID, .parent, .namespace, .model_path, .model_name, .path_hash] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/pa.csv
 
 _start=1
