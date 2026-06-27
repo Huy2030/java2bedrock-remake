@@ -509,7 +509,7 @@ status_message process "Compiling final model list"
 model_list=( $(jq -r '.[] | select(.generated == false) | .path' config.json) )
 
 status_message process "Generating an array of all model PNG files to crosscheck with our atlas"
-jq -n '$ARGS.positional' --args $(find ./assets/**/textures -type f -name '*.png') | sponge scratch_files/all_textures.temp
+jq -n '$ARGS.positional' --args $(find ./assets -path '*/textures/*.png' -type f | sed 's|^\./||' | sed 's|^|./|') | sponge scratch_files/all_textures.temp
 
 mkdir -p scratch_files/spritesheet
 
@@ -548,6 +548,8 @@ do
     echo "[DEBUG] texture_list[0]: ${texture_list[0]}" >&2
     echo "[DEBUG] union_atlas entry ${1}: $(jq -r --arg i "${1}" '.[$i | tonumber] | length' scratch_files/union_atlas.temp) items" >&2
     echo "[DEBUG] all_textures count: $(jq 'length' scratch_files/all_textures.temp)" >&2
+    echo "[DEBUG] union_atlas sample: $(jq -r --arg i "${1}" '.[$i | tonumber] | .[0:3][]' scratch_files/union_atlas.temp 2>/dev/null)" >&2
+    echo "[DEBUG] all_textures sample: $(jq -r '.[0:3][]' scratch_files/all_textures.temp 2>/dev/null)" >&2
     spritesheet-js -f json --name scratch_files/spritesheet/${1} --fullpath --no-trim ${texture_list[@]} 2>&1
     echo ${1} >> scratch_files/atlases.csv
   }
