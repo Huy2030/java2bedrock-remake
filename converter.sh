@@ -59,14 +59,12 @@ else
   status_message process "Input file ${1} detected"
 fi
 
-while getopts w:m:a:b:f:v:r:s:u: flag "${@:2}"
+while getopts w:a:b:v:r:s:u: flag "${@:2}"
 do
     case "${flag}" in
         w) warn=${OPTARG};;
-        m) merge_input=${OPTARG};;
         a) attachable_material=${OPTARG};;
         b) block_material=${OPTARG};;
-        f) fallback_pack=${OPTARG};;
         v) default_asset_version=${OPTARG};;
 	r) rename_model_files=${OPTARG};;
         s) save_scratch=${OPTARG};;
@@ -111,17 +109,13 @@ dependency_check "spritesheet-js" "https://www.npmjs.com/package/spritesheet-js"
 status_message completion "All dependencies have been satisfied\n"
 
 status_message info "This script will now ask some configuration questions. Default values are yellow. Simply press enter to use the defaults.\n"
-user_input merge_input "Is there an existing bedrock pack in this directory with which you would like the output merged? (e.g. input.mcpack)" "null" "Input pack to merge"
 user_input attachable_material "What material should we use for the attachables?" "entity_alphatest_one_sided" "Attachable material"
 user_input block_material "What material should we use for the blocks?" "alpha_test" "Block material"
-user_input fallback_pack "From what URL should we download the fallback resource pack? (must be a direct link)\n Use 'none' if default resources are not needed." "null" "Fallback pack URL"
 
 status_message plain "
 Generating Bedrock 3D resource pack with settings:
-${C_GRAY}Input pack to merge: ${C_BLUE}${merge_input:=null}
 ${C_GRAY}Attachable material: ${C_BLUE}${attachable_material:=entity_alphatest_one_sided}
 ${C_GRAY}Block material: ${C_BLUE}${block_material:=alpha_test}
-${C_GRAY}Fallback pack URL: ${C_BLUE}${fallback_pack:=null}
 "
 
 status_message process "Decompressing input pack"
@@ -282,16 +276,14 @@ jq --slurpfile hashmap scratch_files/hashmap.json '
     )
 ' config.json | sponge config.json
 
-mkdir -p ./staging/rp/models/blocks && mkdir -p ./staging/rp/textures && mkdir -p ./staging/rp/attachables && mkdir -p ./staging/rp/animations && mkdir -p ./staging/bp/blocks && mkdir -p ./staging/bp/items
+mkdir -p ./staging/rp/models/blocks && mkdir -p ./staging/rp/textures && mkdir -p ./staging/rp/attachables && mkdir -p ./staging/rp/animations
 
 if test -f "./pack.png"; then
-    cp ./pack.png ./staging/rp/pack_icon.png && cp ./pack.png ./staging/bp/pack_icon.png
+    cp ./pack.png ./staging/rp/pack_icon.png
 fi
 
 uuid1=($(uuidgen))
 uuid2=($(uuidgen))
-uuid3=($(uuidgen))
-uuid4=($(uuidgen))
 
 pack_desc="$(jq -r '(.pack.description // "Geyser 3D Items Resource Pack")' ./pack.mcmeta)"
 
@@ -332,47 +324,6 @@ jq -nc '
   }
 }
 ' | sponge ./staging/rp/animations/animation.disable.json
-
-if [[ ${fallback_pack} != none ]] && [[ ! -f default_assets.zip ]]
-then
-  status_message process "Now downloading the fallback resource pack:"
-  printf "\e[3m\e[37m"
-  echo
-  curl -sL -o default_assets.zip https://github.com/InventivetalentDev/minecraft-assets/zipball/refs/tags/${default_asset_version:=1.21}
-  echo
-  printf "${C_CLOSE}"
-  status_message completion "Fallback resources downloaded"
-fi
-
-if [[ ${fallback_pack} != null &&  ${fallback_pack} != none ]]
-then
-  printf "\e[3m\e[37m"
-  echo
-  curl -sL -o provided_assets.zip "${fallback_pack}"
-  echo
-  printf "${C_CLOSE}"
-  status_message completion "Provided resources downloaded"
-  mkdir ./providedassetholding
-  unzip -n -q -d ./providedassetholding provided_assets.zip "assets/**"
-  status_message completion "Provided resources decompressed"
-  cp -n -r "./providedassetholding/assets"/** './assets/'
-  status_message completion "Provided resources merged with target pack"
-fi
-
-if [[ ${fallback_pack} != none ]]
-then
-  root_folder=($(unzip -Z -1 default_assets.zip | head -1))
-  mkdir ./defaultassetholding
-  unzip -n -q -d ./defaultassetholding default_assets.zip "${root_folder}assets/minecraft/textures/**/*"
-  unzip -n -q -d ./defaultassetholding default_assets.zip "${root_folder}assets/minecraft/models/**/*"
-  status_message completion "Fallback resources decompressed"
-  mkdir -p './assets/minecraft/textures/'
-  cp -n -r "./defaultassetholding/${root_folder}assets/minecraft/textures"/* './assets/minecraft/textures/'
-  cp -n -r "./defaultassetholding/${root_folder}assets/minecraft/models"/* './assets/minecraft/models/'
-  status_message completion "Fallback resources merged with target pack"
-  rm -rf defaultassetholding
-  status_message critical "Extraneous fallback resources deleted\n"
-fi
 
 convert -size 16x16 xc:none ./assets/minecraft/textures/0.png
 
@@ -509,26 +460,7 @@ status_message process "Compiling final model list"
 model_list=( $(jq -r '.[] | select(.generated == false) | .path' config.json) )
 
 status_message process "Fixing texture namespace paths in model JSON files"
-python3 - <<'PYDACCAU'
-import json,glob,re,os
-def nn(v):
-  if not v or ':' not in v or v.startswith('#'):return v
-  i=v.index(':');ns=v[:i];rest=v[i+1:]
-  tex_path=f"./assets/{ns}/textures/{rest}.png"
-  if os.path.exists(tex_path):return v
-  cleaned=re.sub(r'^(_b_|_)','',ns)
-  return f"{cleaned}:{rest}"
-for f in glob.glob("./assets/**/*.json",recursive=True):
-  try:
-    d=json.load(open(f,encoding="utf-8"));tx=d.get("textures")
-    if not isinstance(tx,dict):continue
-    c=False
-    for k,v in tx.items():
-      nv=nn(v)
-      if nv!=v:tx[k]=nv;c=True
-    if c:json.dump(d,open(f,"w",encoding="utf-8"),separators=(',',':'),ensure_ascii=False)
-  except:pass
-PYDACCAU
+python3 "$(dirname "$0")/itemsadder.py"
 
 status_message process "Generating an array of all model PNG files to crosscheck with our atlas"
 jq -n '$ARGS.positional' --args $(find ./assets -path '*/textures/*.png' -type f | sed 's|^\./||' | sed 's|^|./|') | sponge scratch_files/all_textures.temp
@@ -812,58 +744,6 @@ do
       } | walk( if type == "object" then with_entries(select(.value != null)) else . end)
       ' ${file} | sponge ./staging/rp/animations/${namespace}/${model_path}/animation.${model_name}.json
 
-      if [[ ${generated} = false ]]
-      then
-        mkdir -p ./staging/bp/blocks/${namespace}/${model_path}
-        jq -c -n --arg atlas_index "${atlas_index}" --arg block_material "${block_material}" --arg path_hash "${path_hash}" --arg geometry "${geometry}" '
-        {
-            "format_version": "1.16.100",
-            "minecraft:block": {
-                "description": {
-                    "identifier": ("geyser_custom:" + $path_hash)
-                },
-                "components": {
-                    "minecraft:material_instances": {
-                        "*": {
-                            "texture": ("gmdl_atlas_" + $atlas_index),
-                            "render_method": $block_material,
-                            "face_dimming": false,
-                            "ambient_occlusion": false
-                        }
-                    },
-                    "minecraft:geometry": ("geometry." + $geometry),
-                    "minecraft:placement_filter": {
-                      "conditions": [
-                          {
-                              "allowed_faces": [],
-                              "block_filter": []
-                          }
-                      ]
-                    }
-                }
-            }
-        }
-        ' | sponge ./staging/bp/blocks/${namespace}/${model_path}/${model_name}.json
-      else
-        mkdir -p ./staging/bp/items/${namespace}/${model_path}
-        jq -c -n --arg path_hash "${path_hash}" '
-        {
-            "format_version": "1.16.100",
-            "minecraft:item": {
-                "description": {
-                    "identifier": ("geyser_custom:" + $path_hash),
-                    "category": "items"
-                },
-                "components": {
-                  "minecraft:icon": {
-                    "texture": $path_hash
-                  }
-                }
-            }
-        }
-        ' | sponge ./staging/bp/items/${namespace}/${model_path}/${model_name}.${path_hash}.json
-      fi
-
       mkdir -p ./staging/rp/attachables/${namespace}/${model_path}
       jq -c -n --arg generated "${generated}" --arg atlas_index "${atlas_index}" --arg attachable_material "${attachable_material}" --arg v_main "v.main_hand = c.item_slot == 'main_hand';" --arg v_off "v.off_hand = c.item_slot == 'off_hand';" --arg v_head "v.head = c.item_slot == 'head';" --arg path_hash "${path_hash}" --arg namespace "${namespace}" --arg model_path "${model_path}" --arg model_name "${model_name}" --arg geometry "${geometry}" '
       def tobool: if .=="true" then true elif .=="false" then false else null end;
@@ -950,22 +830,6 @@ then
      rm -rf rm -rf ./staging/rp/attachables/*/
 fi
 
-if test -f ${merge_input}; then
-  mkdir inputbedrockpack
-  status_message process "Decompressing input bedrock pack"
-  unzip -q ${merge_input} -d ./inputbedrockpack
-  status_message process "Merging input bedrock pack with generated bedrock assets"
-  cp -n -r "./inputbedrockpack"/* './staging/rp/'
-  if test -f ./inputbedrockpack/textures/item_texture.json; then
-    status_message process "Merging item texture files"
-    jq -s '{"texture_data":(.[1].texture_data + .[0].texture_data)}' \
-    ./staging/rp/textures/item_texture.json ./inputbedrockpack/textures/item_texture.json | sponge ./staging/rp/textures/item_texture.json
-  fi
-  status_message critical "Deleting input bedrock pack scratch directory"
-  rm -rf inputbedrockpack
-  status_message completion "Input bedrock pack merged with generated assets\n"
-fi
-
 status_message process "Creating Geyser mappings in staging directory"
 echo
 jq '
@@ -975,9 +839,8 @@ jq '
       {
         "name": .path_hash,
         "allow_offhand": true,
-        "icon": (if .generated == true then .path_hash else .bedrock_icon.icon end)
+        "icon": .path_hash
       }
-      + (if (.generated == false) then {"frame": (.bedrock_icon.frame)} else {} end)
       + (if .nbt.CustomModelData then {"custom_model_data": (.nbt.CustomModelData)} else {} end)
       + (if .nbt.Damage then {"damage_predicate": (.nbt.Damage)} else {} end)
       + (if .nbt.Unbreakable then {"unbreakable": (.nbt.Unbreakable)} else {} end)
@@ -1049,7 +912,7 @@ fi
 
 status_message process "Compressing output pack"
 cd ./staging/rp > /dev/null && zip -rq8 bedrock.mcpack . -x "*/.*" && cd ../.. > /dev/null && mv ./staging/rp/bedrock.mcpack ./staging/bedrock.mcpack
-rm -rf ./staging/rp ./staging/bp
+rm -rf ./staging/rp
 
 cp config.json ./staging/config.json
 rm -f config.json
