@@ -122,6 +122,9 @@ status_message process "Decompressing input pack"
 unzip -n -q "${1}"
 status_message completion "Input pack decompressed"
 
+python3 itemsadder.py
+python3 fonts.py
+
 if [ ! -f pack.mcmeta ]
 then
 	status_message error "Invalid resource pack! The pack.mcmeta file does not exist. Is the resource pack improperly compressed in an enclosing folder?"
