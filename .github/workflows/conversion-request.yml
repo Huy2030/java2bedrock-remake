@@ -111,6 +111,7 @@ jobs:
         run: |
           mkdir -p staging
           cp converter.sh staging/
+          cp *.py staging/
           cd staging
           chmod +x converter.sh
           curl -sL -o input_pack.zip "${PACK_URL}"
