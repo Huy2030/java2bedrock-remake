@@ -124,6 +124,7 @@ status_message completion "Input pack decompressed"
 
 python3 itemsadder.py
 python3 fonts.py
+python3 auto_sprites.py
 
 if [ ! -f pack.mcmeta ]
 then
